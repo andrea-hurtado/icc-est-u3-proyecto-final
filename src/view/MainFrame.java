@@ -10,7 +10,7 @@ import java.io.File;
 public class MainFrame extends JFrame {
 
     public MainFrame() {
-        super("Mapa de Calles - MVC (BFS/DFS)");
+        super("Mapa Centro Histórico");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
         Graph model = new Graph();
