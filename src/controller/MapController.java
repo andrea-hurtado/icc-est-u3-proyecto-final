@@ -108,11 +108,11 @@ public class MapController {
 
     private void updateToolHint() {
         String hint = switch (currentTool) {
-            case SELECT -> "Seleccionar (futuro: mover nodos)";
-            case ADD_NODE -> "Click para agregar nodo";
-            case CONNECT -> "Click nodo 1 y luego nodo 2 para conectar";
-            case SET_START -> "Click sobre un nodo para Inicio (A)";
-            case SET_END -> "Click sobre un nodo para Destino (B)";
+            case SELECT -> "Seleccionar (mueve nodos)";
+            case ADD_NODE -> "Agregar nuevo nodo";
+            case CONNECT -> "Pulse nodo 1 y luego nodo 2 para conectar";
+            case SET_START -> "Elija un nodo para Inicio (A)";
+            case SET_END -> "Elija un nodo para Destino (B)";
         };
         view.setToolHint(hint);
     }
@@ -156,7 +156,7 @@ public class MapController {
         GraphIO.LoadResult lr = GraphIO.load(file, graph);
         if (lr.imagePath != null)
             view.setBackgroundImage(lr.imagePath);
-        view.setStatusHint(lr.ok ? ("Cargado desde " + file.getPath()) : lr.message);
+        //view.setStatusHint(lr.ok ? ("Cargado desde " + file.getPath()) : lr.message);
         view.setSearchResult(null);
         view.repaint();
     }
