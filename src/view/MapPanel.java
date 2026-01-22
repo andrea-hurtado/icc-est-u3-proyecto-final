@@ -116,12 +116,27 @@ public class MapPanel extends JPanel {
                 g.setStroke(routeStroke);
                 drawRouteEdges(g, routeEdges);
             }
-
             for (Node n : graph.getNodes()) {
                 boolean isStart = n.id.equals(graph.getStart());
                 boolean isEnd = n.id.equals(graph.getEnd());
                 Color fill = isStart ? startColor : isEnd ? endColor : nodeColor;
                 drawNode(g, n, fill, nodeBorder);
+            }
+
+            if (lastResult != null) {
+                java.util.List<String> visited = lastResult.getVisitedOrder();
+                if (visited != null && !visited.isEmpty()) {
+                    g.setColor(new Color(0, 200, 255, 120)); // azul suave semitransparente
+                    for (String id : visited) {
+                        Node v = graph.getNode(id);
+                        if (v != null) {
+                            int rVisited = 4;
+                            Shape dot = new Ellipse2D.Double(v.x - rVisited, v.y - rVisited, 2 * rVisited,
+                                    2 * rVisited);
+                            g.fill(dot);
+                        }
+                    }
+                }
             }
 
         } else {
