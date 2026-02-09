@@ -1,4 +1,3 @@
-
 package model;
 
 import java.util.*;
@@ -36,6 +35,20 @@ public class Graph {
     public void setEnd(String id) { if (nodes.containsKey(id)) endId = id; }
     public String getStart() { return startId; }
     public String getEnd() { return endId; }
+    
+    public void setBlocked(String id, boolean blocked) {
+        Node n = nodes.get(id);
+        if (n != null) {
+            n.blocked = blocked;
+        }
+    }
+    
+    public void toggleBlocked(String id) {
+        Node n = nodes.get(id);
+        if (n != null) {
+            n.blocked = !n.blocked;
+        }
+    }
 
     public Optional<String> encontrarIdNodoCercano(int x, int y, int radio) {
         String mejorId = null;

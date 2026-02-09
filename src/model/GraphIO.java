@@ -1,4 +1,3 @@
-
 package model;
 
 import java.io.*;
@@ -18,7 +17,7 @@ public class GraphIO {
     public static LoadResult load(File file, Graph g) {
         g.clear();
         String imagePath = null;
-        boolean inNodes = false, inEdges = false;
+        boolean inNodes = false, inEdges = false, inBlocked = false;
 
         try (BufferedReader br = new BufferedReader(new InputStreamReader(
                 new FileInputStream(file), StandardCharsets.UTF_8))) {
@@ -30,11 +29,13 @@ public class GraphIO {
 
                 if (line.startsWith("IMAGE")) {
                     imagePath = line.substring("IMAGE".length()).trim();
-                    inNodes = inEdges = false;
+                    inNodes = inEdges = inBlocked = false;
                 } else if (line.equals("NODES")) {
-                    inNodes = true; inEdges = false;
+                    inNodes = true; inEdges = inBlocked = false;
                 } else if (line.equals("EDGES")) {
-                    inNodes = false; inEdges = true;
+                    inNodes = false; inEdges = true; inBlocked = false;
+                } else if (line.equals("BLOCKED")) {
+                    inNodes = inEdges = false; inBlocked = true;
                 } else if (line.startsWith("START")) {
                     String[] p = line.split("\\s+");
                     if (p.length >= 2) g.setStart(p[1]);
@@ -52,6 +53,9 @@ public class GraphIO {
                 } else if (inEdges) {
                     String[] p = line.split("\\s+");
                     if (p.length >= 2) g.connect(p[0], p[1]);
+                } else if (inBlocked) {
+                    String id = line.trim();
+                    g.setBlocked(id, true);
                 }
             }
             return new LoadResult(imagePath, true, "OK");
@@ -80,6 +84,15 @@ public class GraphIO {
                     }
                 }
             }
+            
+            // Guardar nodos bloqueados
+            pw.println("BLOCKED");
+            for (Node n : g.getNodes()) {
+                if (n.blocked) {
+                    pw.println(n.id);
+                }
+            }
+            
             if (g.getStart() != null) pw.println("START " + g.getStart());
             if (g.getEnd() != null) pw.println("END " + g.getEnd());
             return true;

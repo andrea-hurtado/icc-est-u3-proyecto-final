@@ -15,6 +15,7 @@ public class MapController {
 
     private final Graph graph;
     private final MapPanel view;
+    private Toolbar toolbar;
     private Toolbar.Tool currentTool = Toolbar.Tool.SELECT;
     private String firstNodeToConnect = null;
     private String selectedId = null;
@@ -27,7 +28,10 @@ public class MapController {
         updateToolHint();
     }
 
-    // Interacciones de mouse
+    public void setToolbar(Toolbar toolbar) {
+        this.toolbar = toolbar;
+    }
+
     private void attachMouseHandlers() {
         view.addMouseListener(new MouseAdapter() {
             @Override
@@ -37,6 +41,7 @@ public class MapController {
                     case CONNECT -> handleConnect(e.getX(), e.getY());
                     case SET_START -> handleSetStart(e.getX(), e.getY());
                     case SET_END -> handleSetEnd(e.getX(), e.getY());
+                    case BLOCK -> handleBlock(e.getX(), e.getY());
                     case SELECT -> {
                     }
                 }
@@ -77,7 +82,6 @@ public class MapController {
                 if (n != null) {
                     n.x = e.getX() - dragOffsetX;
                     n.y = e.getY() - dragOffsetY;
-                    // (opcional) limitar a bounds del panel
                     n.x = Math.max(0, Math.min(n.x, view.getWidth()));
                     n.y = Math.max(0, Math.min(n.y, view.getHeight()));
                     view.setStatusHint("Moviendo " + selectedId + " a (" + n.x + "," + n.y + ")");
@@ -137,6 +141,19 @@ public class MapController {
         }
     }
 
+    private void handleBlock(int x, int y) {
+        Optional<String> near = graph.encontrarIdNodoCercano(x, y, 10);
+        if (near.isPresent()) {
+            String id = near.get();
+            graph.toggleBlocked(id);
+            Node n = graph.getNode(id);
+            view.setStatusHint("Nodo " + id + (n.blocked ? " bloqueado ⛔" : " desbloqueado ✅"));
+            view.repaint();
+        } else {
+            view.setStatusHint("Haz click cerca de un nodo para bloquear/desbloquear.");
+        }
+    }
+
     private String nextNodeId() {
         int i = graph.getNodes().size() + 1;
         String id;
@@ -159,11 +176,12 @@ public class MapController {
 
     private void updateToolHint() {
         String hint = switch (currentTool) {
-            case SELECT -> "Seleccionar (mueve nodos)";
-            case ADD_NODE -> "Agregar nuevo nodo";
-            case CONNECT -> "Pulse nodo 1 y luego nodo 2 para conectar";
-            case SET_START -> "Elija un nodo para Inicio (A)";
-            case SET_END -> "Elija un nodo para Destino (B)";
+            case SELECT -> "Seleccionar (arrastra para mover nodos)";
+            case ADD_NODE -> "Click en el mapa para agregar un nuevo nodo";
+            case CONNECT -> "Click en nodo 1, luego en nodo 2 para conectar";
+            case BLOCK -> "Click en un nodo para bloquearlo/desbloquearlo";
+            case SET_START -> "Click en un nodo para marcarlo como Inicio (A)";
+            case SET_END -> "Click en un nodo para marcarlo como Destino (B)";
         };
         view.setToolHint(hint);
     }
@@ -181,12 +199,20 @@ public class MapController {
                 ? VisualizationMode.FINAL_ROUTE
                 : VisualizationMode.EXPLORATION;
         view.setMode(m);
-        view.setStatusHint("Vista: " + m);
+
+        if (toolbar != null) {
+            toolbar.setModeText(m.toString());
+        }
+
+        String modeDesc = (m == VisualizationMode.EXPLORATION)
+                ? "Exploración (muestra todos los caminos)"
+                : "Ruta Final (solo muestra el resultado)";
+        view.setStatusHint("Vista cambiada a: " + modeDesc);
     }
 
     public void onSave(File file) {
         boolean ok = GraphIO.save(file, graph, view.getImagePath());
-        view.setStatusHint(ok ? "Guardado en " + file.getPath() : "Error al guardar.");
+        view.setStatusHint(ok ? "✅ Guardado en " + file.getPath() : "❌ Error al guardar.");
     }
 
     public void onLoad(File file) {
@@ -194,30 +220,46 @@ public class MapController {
         if (lr.imagePath != null)
             view.setBackgroundImage(lr.imagePath);
         view.setSearchResult(null);
-        view.setStatusHint(lr.ok ? ("Cargado: " + file.getPath()) : lr.message);
+        view.setStatusHint(lr.ok ? ("✅ Cargado: " + file.getPath()) : ("❌ " + lr.message));
         view.repaint();
     }
 
     public void onClear() {
         graph.clear();
         view.setSearchResult(null);
-        view.setStatusHint("Grafo limpiado.");
+        view.setStatusHint("🗑 Grafo limpiado - Todo eliminado");
         view.repaint();
     }
 
     private void runAndMeasure(String name, Supplier<SearchResult> algo) {
         String s = graph.getStart(), t = graph.getEnd();
         if (s == null || t == null) {
-            view.setStatusHint("Define Inicio (A) y Destino (B) antes de ejecutar " + name + ".");
+            view.setStatusHint("⚠️ Define Inicio (A) y Destino (B) antes de ejecutar " + name);
             return;
         }
+
+        view.setStatusHint("⏳ Ejecutando " + name + "...");
+
         long t0 = System.nanoTime();
         SearchResult r = algo.get();
         long ms = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - t0);
 
         view.setSearchResult(r);
-        view.setStatusHint((r.hasPath() ? name + " listo (" + r.getPath().size() + " nodos)" : (name + ": no hay ruta"))
-                + " — " + ms + " ms");
+
+        TimeStats.ExecutionRecord record = new TimeStats.ExecutionRecord(
+                name, s, t,
+                graph.getNodes().size(),
+                countEdges(),
+                ms,
+                r.hasPath(),
+                r.hasPath() ? r.getPath().size() : 0);
+        TimeStats.addRecord(record);
+
+        String statusMsg = r.hasPath()
+                ? String.format("✅ %s: Ruta encontrada | %d nodos | %d ms", name, r.getPath().size(), ms)
+                : String.format("❌ %s: No hay ruta disponible | %d ms", name, ms);
+
+        view.setStatusHint(statusMsg);
         logTime(name, ms, s, t, graph.getNodes().size(), countEdges());
     }
 
@@ -248,7 +290,7 @@ public class MapController {
                 pw.printf("%s,%s,%s,%s,%d,%d,%d%n", ts, algo, s, t, nNodes, nEdges, ms);
             }
         } catch (Exception ex) {
-            view.setStatusHint("No se pudo escribir data/times.csv: " + ex.getMessage());
+            view.setStatusHint("⚠️ No se pudo escribir data/times.csv: " + ex.getMessage());
         }
     }
 
