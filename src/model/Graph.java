@@ -9,13 +9,18 @@ public class Graph {
     private String startId = null;
     private String endId = null;
 
-    public Collection<Node> getNodes() { return nodes.values(); }
-    public Map<String, Set<String>> getAdjacency() { return adj; }
-    public Node getNode(String id) { return nodes.get(id); }
-    public boolean contains(String id) { return nodes.containsKey(id); }
+    public Collection<Node> getNodes() {
+         return nodes.values(); }
+    public Map<String, Set<String>> getAdjacency() {
+         return adj; }
+    public Node getNode(String id) { 
+        return nodes.get(id); }
+    public boolean contains(String id) { 
+        return nodes.containsKey(id); }
 
     public void addNode(Node n) {
-        if (nodes.containsKey(n.id)) return;
+        if (nodes.containsKey(n.id)) 
+            return;
         nodes.put(n.id, n);
         adj.put(n.id, new LinkedHashSet<>());
     }
@@ -32,10 +37,14 @@ public class Graph {
         startId = endId = null;
     }
 
-    public void setStart(String id) { if (nodes.containsKey(id)) startId = id; }
-    public void setEnd(String id) { if (nodes.containsKey(id)) endId = id; }
-    public String getStart() { return startId; }
-    public String getEnd() { return endId; }
+    public void setStart(String id) { 
+        if (nodes.containsKey(id)) startId = id; }
+    public void setEnd(String id) {
+         if (nodes.containsKey(id)) endId = id; }
+    public String getStart() { 
+        return startId; }
+    public String getEnd() { 
+        return endId; }
 
     public Optional<String> encontrarIdNodoCercano(int x, int y, int radio) {
         String mejorId = null;

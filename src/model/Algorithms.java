@@ -32,7 +32,8 @@ public class Algorithms {
 
     // DFS recorre cualquier camino
     public static SearchResult dfs(Graph g, String start, String end) {
-        if (start == null || end == null) return new SearchResult(List.of(), List.of(), "DFS");
+        if (start == null || end == null) 
+            return new SearchResult(List.of(), List.of(), "DFS");
         Set<String> visited = new LinkedHashSet<>();
         List<String> path = new ArrayList<>();
         boolean found = dfsRec(g, start, end, visited, path);
