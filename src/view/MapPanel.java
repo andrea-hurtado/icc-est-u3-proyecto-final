@@ -69,8 +69,8 @@ public class MapPanel extends JPanel {
         super.paintComponent(gBase);
         Graphics2D g = (Graphics2D) gBase.create();
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
 
-        // Fondo
         if (background != null) {
             g.drawImage(background, 0, 0, this);
         } else {
@@ -78,18 +78,24 @@ public class MapPanel extends JPanel {
             g.fillRect(0, 0, getWidth(), getHeight());
         }
 
-        // Paleta
-        Color edgeColor = new Color(255, 230, 128);
         Color nodeColor = new Color(220, 60, 60);
         Color nodeBorder = new Color(255, 255, 255);
         Color startColor = new Color(60, 200, 60);
         Color endColor = new Color(60, 120, 230);
+        Color blockedColor = new Color(40, 40, 40);
+        Color blockedBorder = new Color(180, 0, 0);
+        
+        Color exploredEdgeColor = new Color(70, 130, 255, 200); 
+        Color finalPathColor = new Color(255, 60, 0); 
+        
         Stroke edgeStroke = new BasicStroke(2.0f);
-        Stroke routeStroke = new BasicStroke(4.0f);
+        Stroke exploredStroke = new BasicStroke(5.0f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND); 
+        Stroke routeStroke = new BasicStroke(6.0f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND); 
 
-        // Conjunto de aristas de la ruta (para dibujar con más grosor)
         Set<String> routeEdges = new HashSet<>();
         Set<String> routeNodes = new HashSet<>();
+        Set<String> exploredEdges = new HashSet<>();
+        
         if (lastResult != null && lastResult.hasPath()) {
             List<String> p = lastResult.getPath();
             routeNodes.addAll(p);
@@ -97,10 +103,14 @@ public class MapPanel extends JPanel {
                 String a = p.get(i), b = p.get(i + 1);
                 routeEdges.add(edgeKey(a, b));
             }
+            
+            if (lastResult.getAlgorithm().equals("DFS") && lastResult.getExploredEdges() != null) {
+                exploredEdges.addAll(lastResult.getExploredEdges());
+            }
         }
 
         if (mode == VisualizationMode.EXPLORATION) {
-            g.setColor(edgeColor);
+            g.setColor(new Color(255, 230, 128, 100)); 
             g.setStroke(edgeStroke);
             for (var e : graph.getAdjacency().entrySet()) {
                 Node a = graph.getNode(e.getKey());
@@ -111,28 +121,80 @@ public class MapPanel extends JPanel {
                     drawEdge(g, a, b);
                 }
             }
+            
+            if (!exploredEdges.isEmpty()) {
+                g.setStroke(exploredStroke);
+                for (String edgeKey : exploredEdges) {
+                    if (!routeEdges.contains(edgeKey)) {
+                        String[] parts = edgeKey.split("-");
+                        if (parts.length == 2) {
+                            Node a = graph.getNode(parts[0]);
+                            Node b = graph.getNode(parts[1]);
+                            if (a != null && b != null) {
+                                g.setColor(new Color(70, 130, 255, 80)); 
+                                g.setStroke(new BasicStroke(7.0f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+                                drawEdge(g, a, b);
+                                
+                                g.setColor(exploredEdgeColor);
+                                g.setStroke(exploredStroke);
+                                drawEdge(g, a, b);
+                            }
+                        }
+                    }
+                }
+            }
+            
             if (!routeEdges.isEmpty()) {
-                g.setColor(new Color(255, 90, 0));
+                g.setColor(new Color(255, 100, 0, 100)); 
+                g.setStroke(new BasicStroke(8.0f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+                drawRouteEdges(g, routeEdges);
+                
+                g.setColor(finalPathColor);
                 g.setStroke(routeStroke);
                 drawRouteEdges(g, routeEdges);
             }
+            
             for (Node n : graph.getNodes()) {
                 boolean isStart = n.id.equals(graph.getStart());
                 boolean isEnd = n.id.equals(graph.getEnd());
-                Color fill = isStart ? startColor : isEnd ? endColor : nodeColor;
-                drawNode(g, n, fill, nodeBorder);
+                boolean isBlocked = n.blocked;
+                
+                Color fill;
+                Color border;
+                
+                if (isBlocked) {
+                    fill = blockedColor;
+                    border = blockedBorder;
+                } else if (isStart) {
+                    fill = startColor;
+                    border = nodeBorder;
+                } else if (isEnd) {
+                    fill = endColor;
+                    border = nodeBorder;
+                } else {
+                    fill = nodeColor;
+                    border = nodeBorder;
+                }
+                
+                drawNode(g, n, fill, border, isBlocked);
             }
 
             if (lastResult != null) {
                 java.util.List<String> visited = lastResult.getVisitedOrder();
                 if (visited != null && !visited.isEmpty()) {
-                    g.setColor(new Color(0, 200, 255, 120)); // azul suave semitransparente
                     for (String id : visited) {
                         Node v = graph.getNode(id);
-                        if (v != null) {
-                            int rVisited = 4;
-                            Shape dot = new Ellipse2D.Double(v.x - rVisited, v.y - rVisited, 2 * rVisited,
-                                    2 * rVisited);
+                        if (v != null && !v.blocked) {
+                            int rVisited = 5;
+                            
+                            g.setColor(new Color(0, 255, 255, 60));
+                            Shape halo = new Ellipse2D.Double(v.x - rVisited - 2, v.y - rVisited - 2, 
+                                                              2 * (rVisited + 2), 2 * (rVisited + 2));
+                            g.fill(halo);
+                            
+                            g.setColor(new Color(0, 220, 255, 180));
+                            Shape dot = new Ellipse2D.Double(v.x - rVisited, v.y - rVisited, 
+                                                            2 * rVisited, 2 * rVisited);
                             g.fill(dot);
                         }
                     }
@@ -140,26 +202,31 @@ public class MapPanel extends JPanel {
             }
 
         } else {
+            // Modo FINAL_ROUTE: solo mostrar camino final
             if (!routeEdges.isEmpty()) {
-                g.setColor(new Color(255, 90, 0));
+                g.setColor(finalPathColor);
                 g.setStroke(routeStroke);
                 drawRouteEdges(g, routeEdges);
                 for (String id : routeNodes) {
                     Node n = graph.getNode(id);
                     if (n != null)
-                        drawNode(g, n, nodeColor, nodeBorder);
+                        drawNode(g, n, nodeColor, nodeBorder, false);
                 }
             }
             if (graph.getStart() != null) {
                 Node s = graph.getNode(graph.getStart());
                 if (s != null)
-                    drawNode(g, s, startColor, nodeBorder);
+                    drawNode(g, s, startColor, nodeBorder, false);
             }
             if (graph.getEnd() != null) {
                 Node e = graph.getNode(graph.getEnd());
                 if (e != null)
-                    drawNode(g, e, endColor, nodeBorder);
+                    drawNode(g, e, endColor, nodeBorder, false);
             }
+        }
+
+        if (mode == VisualizationMode.EXPLORATION && lastResult != null) {
+            drawLegend(g);
         }
 
         g.setFont(getFont().deriveFont(Font.BOLD, 13f));
@@ -180,6 +247,51 @@ public class MapPanel extends JPanel {
 
         g.dispose();
     }
+    
+    private void drawLegend(Graphics2D g) {
+        int x = 10;
+        int y = getHeight() - 120;
+        int w = 220;
+        int h = 110;
+        
+        g.setColor(new Color(0, 0, 0, 180));
+        g.fillRoundRect(x, y, w, h, 10, 10);
+        
+        g.setFont(getFont().deriveFont(Font.BOLD, 11f));
+        g.setColor(Color.WHITE);
+        g.drawString("LEYENDA", x + 10, y + 18);
+        
+        g.setFont(getFont().deriveFont(Font.PLAIN, 10f));
+        
+        // Caminos explorados (DFS)
+        if (lastResult.getAlgorithm().equals("DFS")) {
+            g.setStroke(new BasicStroke(4.0f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+            g.setColor(new Color(70, 130, 255, 200));
+            g.drawLine(x + 10, y + 35, x + 35, y + 35);
+            g.setColor(Color.WHITE);
+            g.drawString("Caminos explorados", x + 40, y + 38);
+        }
+        
+        // Camino final
+        g.setStroke(new BasicStroke(5.0f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        g.setColor(new Color(255, 60, 0));
+        g.drawLine(x + 10, y + 55, x + 35, y + 55);
+        g.setColor(Color.WHITE);
+        g.drawString("Camino final", x + 40, y + 58);
+        
+        // Nodos visitados
+        g.setColor(new Color(0, 220, 255, 180));
+        g.fillOval(x + 15, y + 68, 10, 10);
+        g.setColor(Color.WHITE);
+        g.drawString("Nodos visitados", x + 40, y + 78);
+        
+        // Info adicional
+        if (lastResult != null && lastResult.getExploredEdges() != null) {
+            g.setFont(getFont().deriveFont(Font.ITALIC, 9f));
+            g.setColor(new Color(200, 200, 200));
+            g.drawString("Caminos explorados: " + lastResult.getExploredEdges().size(), x + 10, y + 98);
+        }
+    }
 
     private void drawEdge(Graphics2D g, Node a, Node b) {
         g.draw(new Line2D.Double(a.x, a.y, b.x, b.y));
@@ -199,16 +311,29 @@ public class MapPanel extends JPanel {
         }
     }
 
-    private void drawNode(Graphics2D g, Node n, Color fill, Color border) {
-        int r = 6;
+    private void drawNode(Graphics2D g, Node n, Color fill, Color border, boolean isBlocked) {
+        int r = 7; 
         Shape s = new Ellipse2D.Double(n.x - r, n.y - r, 2 * r, 2 * r);
         g.setColor(fill);
         g.fill(s);
-        g.setStroke(new BasicStroke(1.5f));
+        
+        g.setStroke(new BasicStroke(isBlocked ? 2.5f : 1.5f));
         g.setColor(border);
         g.draw(s);
+        
+        if (isBlocked) {
+            g.setColor(new Color(255, 80, 80));
+            g.setStroke(new BasicStroke(2.0f));
+            int offset = 5;
+            g.drawLine(n.x - offset, n.y - offset, n.x + offset, n.y + offset);
+            g.drawLine(n.x - offset, n.y + offset, n.x + offset, n.y - offset);
+        }
 
         g.setFont(getFont().deriveFont(Font.BOLD, 11f));
+        g.setColor(new Color(240, 240, 240));
+        
+        g.setColor(new Color(0, 0, 0, 150));
+        g.drawString(n.id, n.x + 9, n.y - 7);
         g.setColor(new Color(240, 240, 240));
         g.drawString(n.id, n.x + 8, n.y - 8);
     }
