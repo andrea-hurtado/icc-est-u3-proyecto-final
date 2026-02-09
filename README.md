@@ -248,10 +248,10 @@ El usuario puede:
 
 ### Configuración 1: Mapa Urbano Simple
 
-![alt text](assets/vistaExploracion.png)
+![alt text](assets/bfs.png)
 *Modo Exploración mostrando todos los nodos visitados por BFS*
 
-![alt text](assets/vistaFinal.png)
+![assets/rutafinal.png](assets/rutafinal.png)
 *Modo Ruta Final mostrando solo el camino definitivo*
 
 ### Configuración 2: Mapa Complejo con Bloqueos
@@ -259,7 +259,7 @@ El usuario puede:
 ![alt text](assets/bloqueados.png)
 *Grafo con nodos bloqueados (negro) que los algoritmos deben evitar*
 
-![alt text](assets/bfs.png)
+![assets/dfs.png](assets/dfs.png)
 *DFS mostrando caminos explorados (azul) y ruta final (naranja)*
 
 ### Estadísticas de Tiempo
