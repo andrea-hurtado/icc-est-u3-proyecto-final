@@ -26,13 +26,18 @@ public class MapPanel extends JPanel {
 
     public void setBackgroundImage(String path) {
         this.imagePath = path;
+
         if (path == null) {
             background = null;
         } else {
-            background = new ImageIcon(path).getImage();
-            setPreferredSize(new Dimension(background.getWidth(null), background.getHeight(null)));
-            revalidate();
+            try {
+                background = javax.imageio.ImageIO.read(new java.io.File(path));
+            } catch (Exception e) {
+                e.printStackTrace();
+                background = null;
+            }
         }
+
         repaint();
     }
 
@@ -84,18 +89,18 @@ public class MapPanel extends JPanel {
         Color endColor = new Color(60, 120, 230);
         Color blockedColor = new Color(40, 40, 40);
         Color blockedBorder = new Color(180, 0, 0);
-        
-        Color exploredEdgeColor = new Color(70, 130, 255, 200); 
-        Color finalPathColor = new Color(255, 60, 0); 
-        
+
+        Color exploredEdgeColor = new Color(70, 130, 255, 200);
+        Color finalPathColor = new Color(255, 60, 0);
+
         Stroke edgeStroke = new BasicStroke(2.0f);
-        Stroke exploredStroke = new BasicStroke(5.0f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND); 
-        Stroke routeStroke = new BasicStroke(6.0f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND); 
+        Stroke exploredStroke = new BasicStroke(5.0f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND);
+        Stroke routeStroke = new BasicStroke(6.0f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND);
 
         Set<String> routeEdges = new HashSet<>();
         Set<String> routeNodes = new HashSet<>();
         Set<String> exploredEdges = new HashSet<>();
-        
+
         if (lastResult != null && lastResult.hasPath()) {
             List<String> p = lastResult.getPath();
             routeNodes.addAll(p);
@@ -103,14 +108,14 @@ public class MapPanel extends JPanel {
                 String a = p.get(i), b = p.get(i + 1);
                 routeEdges.add(edgeKey(a, b));
             }
-            
+
             if (lastResult.getAlgorithm().equals("DFS") && lastResult.getExploredEdges() != null) {
                 exploredEdges.addAll(lastResult.getExploredEdges());
             }
         }
 
         if (mode == VisualizationMode.EXPLORATION) {
-            g.setColor(new Color(255, 230, 128, 100)); 
+            g.setColor(new Color(255, 230, 128, 100));
             g.setStroke(edgeStroke);
             for (var e : graph.getAdjacency().entrySet()) {
                 Node a = graph.getNode(e.getKey());
@@ -121,7 +126,7 @@ public class MapPanel extends JPanel {
                     drawEdge(g, a, b);
                 }
             }
-            
+
             if (!exploredEdges.isEmpty()) {
                 g.setStroke(exploredStroke);
                 for (String edgeKey : exploredEdges) {
@@ -131,10 +136,10 @@ public class MapPanel extends JPanel {
                             Node a = graph.getNode(parts[0]);
                             Node b = graph.getNode(parts[1]);
                             if (a != null && b != null) {
-                                g.setColor(new Color(70, 130, 255, 80)); 
+                                g.setColor(new Color(70, 130, 255, 80));
                                 g.setStroke(new BasicStroke(7.0f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
                                 drawEdge(g, a, b);
-                                
+
                                 g.setColor(exploredEdgeColor);
                                 g.setStroke(exploredStroke);
                                 drawEdge(g, a, b);
@@ -143,25 +148,25 @@ public class MapPanel extends JPanel {
                     }
                 }
             }
-            
+
             if (!routeEdges.isEmpty()) {
-                g.setColor(new Color(255, 100, 0, 100)); 
+                g.setColor(new Color(255, 100, 0, 100));
                 g.setStroke(new BasicStroke(8.0f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
                 drawRouteEdges(g, routeEdges);
-                
+
                 g.setColor(finalPathColor);
                 g.setStroke(routeStroke);
                 drawRouteEdges(g, routeEdges);
             }
-            
+
             for (Node n : graph.getNodes()) {
                 boolean isStart = n.id.equals(graph.getStart());
                 boolean isEnd = n.id.equals(graph.getEnd());
                 boolean isBlocked = n.blocked;
-                
+
                 Color fill;
                 Color border;
-                
+
                 if (isBlocked) {
                     fill = blockedColor;
                     border = blockedBorder;
@@ -175,7 +180,7 @@ public class MapPanel extends JPanel {
                     fill = nodeColor;
                     border = nodeBorder;
                 }
-                
+
                 drawNode(g, n, fill, border, isBlocked);
             }
 
@@ -186,15 +191,15 @@ public class MapPanel extends JPanel {
                         Node v = graph.getNode(id);
                         if (v != null && !v.blocked) {
                             int rVisited = 5;
-                            
+
                             g.setColor(new Color(0, 255, 255, 60));
-                            Shape halo = new Ellipse2D.Double(v.x - rVisited - 2, v.y - rVisited - 2, 
-                                                              2 * (rVisited + 2), 2 * (rVisited + 2));
+                            Shape halo = new Ellipse2D.Double(v.x - rVisited - 2, v.y - rVisited - 2,
+                                    2 * (rVisited + 2), 2 * (rVisited + 2));
                             g.fill(halo);
-                            
+
                             g.setColor(new Color(0, 220, 255, 180));
-                            Shape dot = new Ellipse2D.Double(v.x - rVisited, v.y - rVisited, 
-                                                            2 * rVisited, 2 * rVisited);
+                            Shape dot = new Ellipse2D.Double(v.x - rVisited, v.y - rVisited,
+                                    2 * rVisited, 2 * rVisited);
                             g.fill(dot);
                         }
                     }
@@ -247,22 +252,22 @@ public class MapPanel extends JPanel {
 
         g.dispose();
     }
-    
+
     private void drawLegend(Graphics2D g) {
         int x = 10;
         int y = getHeight() - 120;
         int w = 220;
         int h = 110;
-        
+
         g.setColor(new Color(0, 0, 0, 180));
         g.fillRoundRect(x, y, w, h, 10, 10);
-        
+
         g.setFont(getFont().deriveFont(Font.BOLD, 11f));
         g.setColor(Color.WHITE);
         g.drawString("LEYENDA", x + 10, y + 18);
-        
+
         g.setFont(getFont().deriveFont(Font.PLAIN, 10f));
-        
+
         // Caminos explorados (DFS)
         if (lastResult.getAlgorithm().equals("DFS")) {
             g.setStroke(new BasicStroke(4.0f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
@@ -271,20 +276,20 @@ public class MapPanel extends JPanel {
             g.setColor(Color.WHITE);
             g.drawString("Caminos explorados", x + 40, y + 38);
         }
-        
+
         // Camino final
         g.setStroke(new BasicStroke(5.0f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
         g.setColor(new Color(255, 60, 0));
         g.drawLine(x + 10, y + 55, x + 35, y + 55);
         g.setColor(Color.WHITE);
         g.drawString("Camino final", x + 40, y + 58);
-        
+
         // Nodos visitados
         g.setColor(new Color(0, 220, 255, 180));
         g.fillOval(x + 15, y + 68, 10, 10);
         g.setColor(Color.WHITE);
         g.drawString("Nodos visitados", x + 40, y + 78);
-        
+
         // Info adicional
         if (lastResult != null && lastResult.getExploredEdges() != null) {
             g.setFont(getFont().deriveFont(Font.ITALIC, 9f));
@@ -312,15 +317,15 @@ public class MapPanel extends JPanel {
     }
 
     private void drawNode(Graphics2D g, Node n, Color fill, Color border, boolean isBlocked) {
-        int r = 7; 
+        int r = 7;
         Shape s = new Ellipse2D.Double(n.x - r, n.y - r, 2 * r, 2 * r);
         g.setColor(fill);
         g.fill(s);
-        
+
         g.setStroke(new BasicStroke(isBlocked ? 2.5f : 1.5f));
         g.setColor(border);
         g.draw(s);
-        
+
         if (isBlocked) {
             g.setColor(new Color(255, 80, 80));
             g.setStroke(new BasicStroke(2.0f));
@@ -331,7 +336,7 @@ public class MapPanel extends JPanel {
 
         g.setFont(getFont().deriveFont(Font.BOLD, 11f));
         g.setColor(new Color(240, 240, 240));
-        
+
         g.setColor(new Color(0, 0, 0, 150));
         g.drawString(n.id, n.x + 9, n.y - 7);
         g.setColor(new Color(240, 240, 240));
